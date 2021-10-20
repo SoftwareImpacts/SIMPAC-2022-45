@@ -154,7 +154,7 @@ Base.show(io::IO, ::VariationalMessage) = print(io, string("VariationalMessage(:
 getcache(vmessage::VariationalMessage)                    = vmessage.cache
 setcache!(vmessage::VariationalMessage, message::Message) = vmessage.cache = message
 
-compute_message(vmessage::VariationalMessage) = vmessage.mappingFn((vmessage.messages, getrecent(vmessage.marginals)))
+compute_message(vmessage::VariationalMessage) = vmessage.mappingFn((getrecent(vmessage.messages), getrecent(vmessage.marginals)))
 
 function materialize!(vmessage::VariationalMessage)
     cache = getcache(vmessage)
@@ -166,10 +166,39 @@ function materialize!(vmessage::VariationalMessage)
     return message
 end
 
+## Variational Message
+
+mutable struct BeliefPropagationMessage{R, S, F} <: AbstractMessage
+    messages   :: R
+    marginals  :: S
+    mappingFn  :: F
+    cache      :: Union{Nothing, Message}
+end
+
+BeliefPropagationMessage(messages::R, marginals::S, mappingFn::F) where { R, S, F } = BeliefPropagationMessage(messages, marginals, mappingFn, nothing)
+
+Base.show(io::IO, ::BeliefPropagationMessage) = print(io, string("BeliefPropagationMessage(:postponed)"))
+
+getcache(vmessage::BeliefPropagationMessage)                    = vmessage.cache
+setcache!(vmessage::BeliefPropagationMessage, message::Message) = vmessage.cache = message
+
+compute_message(vmessage::BeliefPropagationMessage) = vmessage.mappingFn((getrecent(vmessage.messages), getrecent(vmessage.marginals)))
+
+function materialize!(vmessage::BeliefPropagationMessage)
+    cache = getcache(vmessage)
+    if cache !== nothing
+        return cache
+    end
+    message = compute_message(vmessage)
+    setcache!(vmessage, message)
+    return message
+end
+
 ## Utility functions
 
-as_message(message::Message)             = message
-as_message(vmessage::VariationalMessage) = materialize!(vmessage)
+as_message(message::Message)                   = message
+as_message(vmessage::VariationalMessage)       = materialize!(vmessage)
+as_message(bmessage::BeliefPropagationMessage) = materialize!(bmessage)
 
 ## Operators
 

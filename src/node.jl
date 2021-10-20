@@ -582,7 +582,7 @@ end
 function get_messages_observable(factornode, messages)
     if !isempty(messages)
         msgs_names      = Val{ map(name, messages) }
-        msgs_observable = combineLatest(map(m -> messagein(m), messages), PushNew())
+        msgs_observable = combineLatestUpdates(map(m -> messagein(m), messages), PushNew())
         return msgs_names, msgs_observable
     else
         return nothing, of(nothing)
@@ -605,7 +605,7 @@ end
 apply_mapping(msgs_observable, marginals_observable, mapping) = (dependencies) -> VariationalMessage(dependencies[1], dependencies[2], mapping)
 
 # Fallback for Belief Propagation
-apply_mapping(msgs_observable, marginals_observable::SingleObservable{Nothing}, mapping) = mapping
+apply_mapping(msgs_observable, marginals_observable::SingleObservable{Nothing}, mapping) = (dependencies) -> BeliefPropagationMessage(dependencies[1], dependencies[2], mapping)
 
 function activate!(model, factornode::AbstractFactorNode)
     fform = functionalform(factornode)
@@ -636,7 +636,7 @@ function activate!(model, factornode::AbstractFactorNode)
         vmessageout = vmessageout |> schedule_on(global_reactive_scheduler(getoptions(model)))
 
         set!(messageout(interface), vmessageout |> share_recent())
-        set!(messagein(interface), messageout(connectedvar(interface), connectedvarindex(interface)))
+        set!(messagein(interface), messageout(connectedvar(interface), connectedvarindex(interface)) |> share_recent())
     end
 end
 
