@@ -92,6 +92,8 @@ end
 # Note: we need extra Base.Generator(as_message, messages) step here, because some of the messages might be VMP messages
 # We want to cast it explicitly to a Message structure (which as_message does in case of VariationalMessage)
 # We use with Base.Generator to reduce an amount of memory used by this procedure since Generator generates items lazily
+# prod_foldl_reduce(prod_constraint, form_constraint, ::FormConstraintCheckEach) = (messages) -> begin @show mean_cov.(as_message.(messages)), is_initial.(as_message.(messages)); foldl((left, right) -> constrain_form(form_constraint, multiply_messages(prod_constraint, left, right)), Base.Generator(as_message, messages)) end
+# prod_foldl_reduce(prod_constraint, form_constraint, ::FormConstraintCheckLast) = (messages) -> begin @show mean_cov.(as_message.(messages)), is_initial.(as_message.(messages)); constrain_form(form_constraint, foldl((left, right) -> multiply_messages(prod_constraint, left, right), Base.Generator(as_message, messages))) end
 prod_foldl_reduce(prod_constraint, form_constraint, ::FormConstraintCheckEach) = (messages) -> foldl((left, right) -> constrain_form(form_constraint, multiply_messages(prod_constraint, left, right)), Base.Generator(as_message, messages))
 prod_foldl_reduce(prod_constraint, form_constraint, ::FormConstraintCheckLast) = (messages) -> constrain_form(form_constraint, foldl((left, right) -> multiply_messages(prod_constraint, left, right), Base.Generator(as_message, messages)))
 
@@ -155,7 +157,7 @@ Base.show(io::IO, ::VariationalMessage) = print(io, string("VariationalMessage(:
 getcache(vmessage::VariationalMessage)                    = vmessage.cache
 setcache!(vmessage::VariationalMessage, message::Message) = vmessage.cache = message
 
-compute_message(vmessage::VariationalMessage) = vmessage.mappingFn((vmessage.messages, getrecent(vmessage.marginals)))
+compute_message(vmessage::VariationalMessage) = vmessage.mappingFn((getrecent(vmessage.messages), getrecent(vmessage.marginals)))
 
 function materialize!(vmessage::VariationalMessage)
     cache = getcache(vmessage)
@@ -165,6 +167,18 @@ function materialize!(vmessage::VariationalMessage)
     message = compute_message(vmessage)
     setcache!(vmessage, message)
     return message
+end
+
+function is_initial(vmp::VariationalMessage) 
+    messages  = getrecent(vmp.messages)
+    marginals = getrecent(vmp.marginals)
+    # Message is clamped if all of the inputs are clamped
+    is_message_clamped = __check_all(is_clamped, messages) && __check_all(is_clamped, marginals)
+
+    # Message is initial if it is not clamped and all of the inputs are either clamped or initial
+    is_message_initial = !is_message_clamped && (__check_all(is_clamped_or_initial, messages) && __check_all(is_clamped_or_initial, marginals))
+
+    return is_message_initial
 end
 
 ## Utility functions

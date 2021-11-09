@@ -38,7 +38,7 @@ function score(::Type{T}, objective::BetheFreeEnergy, model, scheduler) where { 
 
     point_entropies = InfCountingReal(eltype(T), data_point_entropies_n + constant_point_entropies_n + form_point_entropies_n)
 
-    return combineLatest((node_bound_free_energies_sum, variable_bound_entropies_sum), PushNew()) |> map(eltype(T), d -> float(d[1] + d[2] - point_entropies))
+    return combineLatest((node_bound_free_energies_sum, variable_bound_entropies_sum), PushNew()) |> map(eltype(T), d -> float(d[1] + d[2] - point_entropies)) |> tap(e -> println("FE: $e"))
 end
 
 ## Average energy function helpers

@@ -75,6 +75,7 @@ get_pipeline_stages(randomvar::RandomVariable)        = randomvar.pipeline
 add_pipeline_stage!(randomvar::RandomVariable, stage) = randomvar.pipeline = (randomvar.pipeline + stage)
 
 _getmarginal(randomvar::RandomVariable)              = randomvar.marginal
+# _setmarginal!(randomvar::RandomVariable, observable) = connect!(_getmarginal(randomvar), observable |> tap(m -> println("-"^80, "\n", "marginal $(indexed_name(randomvar)) computed: $(entropy(m)) $(is_initial(m))", "\n", "-"^80)))
 _setmarginal!(randomvar::RandomVariable, observable) = connect!(_getmarginal(randomvar), observable)
 _makemarginal(randomvar::RandomVariable)             = collectLatest(AbstractMessage, Marginal, randomvar.input_messages, marginal_prod_fn(randomvar))
 
@@ -114,7 +115,7 @@ function initialize_output_messages!(::Nothing, randomvar::RandomVariable)
 
     @inbounds for i in 1:d
         outputmsgs[i] = MessageObservable(Message)
-        outputmsg     = collectLatest(AbstractMessage, Message, skipindex(inputmsgs, i), prod_fn)
+        outputmsg     = collectLatest(AbstractMessage, Message, map(e -> apply_skip_filter(e, SkipInitial()), skipindex(inputmsgs, i)), prod_fn)
         connect!(outputmsgs[i], outputmsg)
     end
 
