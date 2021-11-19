@@ -34,6 +34,8 @@ function constrain_form(pmconstraint::PointMassFormConstraint, message::Message)
     return Message(call_optimizer(pmconstraint, data), is_clamped, is_initial)
 end
 
+##  Univariate case
+
 function default_point_mass_form_constraint_optimizer(::Type{ Univariate }, ::Type{ Continuous }, constraint::PointMassFormConstraint, distribution)
 
     target = let distribution = distribution 
@@ -67,3 +69,43 @@ function default_point_mass_form_constraint_starting_point(::Type{ Univariate },
         error("No default starting point specified for a range [ $(lb), $(rb) ]")
     end
 end
+
+##  Multivariate case
+
+function default_point_mass_form_constraint_optimizer(::Type{ Multivariate }, ::Type{ Continuous }, constraint::PointMassFormConstraint, distribution)
+
+    target = let distribution = distribution 
+        (x) -> -logpdf(distribution, x)
+    end
+
+    support = Distributions.support(distribution)
+
+    lb =  DomainSets.infimum(support) 
+    rb =  DomainSets.supremum(support)
+
+    result = if all(isinf.(lb)) && all(isinf.(rb))
+        optimize(target, call_starting_point(constraint, distribution), LBFGS())
+    else
+        optimize(target, lb, rb, call_starting_point(constraint, distribution), Fminbox(GradientDescent()))
+    end
+
+    if Optim.converged(result)
+        return PointMass(Optim.minimizer(result))
+    else
+        error("Optimisation procedure for point mass estimation did not converge", result)
+    end
+end
+
+function default_point_mass_form_constraint_starting_point(::Type{ Multivariate }, ::Type{ Continuous }, constraint::PointMassFormConstraint, distribution)
+    support = Distributions.support(distribution)
+    lb      = DomainSets.infimum(support)
+    rb      = DomainSets.supremum(support)
+    return if all(isinf.(lb)) && all(isinf.(rb))
+        return zeros(ndims(distribution))
+    else
+        error("No default starting point specified for a domain $(lb) × $(rb).")
+    end
+end
+
+
+

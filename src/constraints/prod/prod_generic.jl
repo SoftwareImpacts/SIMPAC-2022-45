@@ -27,14 +27,16 @@ Base.show(io::IO, product::DistProduct) = print(io, "DistProduct(", getleft(prod
 getleft(product::DistProduct)  = product.left
 getright(product::DistProduct) = product.right
 
-function Distributions.support(product::DistProduct)
-    lsupport = Distributions.support(getleft(product))
-    rsupport = Distributions.support(getright(product))
-    if lsupport != rsupport
-        error("Product $product has different support for left and right entries.")
+@inline function __check_left_right_entries(name::Symbol, fn::F, product) where F <: Function 
+    lcheck = fn(getleft(product))
+    rcheck = fn(getleft(product))
+    if !isequal(lcheck, rcheck)
+        error("Product $product has different $name for left and right entries.")
     end
-    return lsupport
+    return fn(getleft(product))
 end
+
+Distributions.support(product::DistProduct) = __check_left_right_entries(:support, Distributions.support, product)
 
 Distributions.mean(product::DistProduct)      = error("mean() is not defined for $(product). DistProduct structure has to be approximated and cannot be used in inference procedure.")
 Distributions.median(product::DistProduct)    = error("median() is not defined for $(product). DistProduct structure has to be approximated and cannot be used in inference procedure.")
@@ -54,9 +56,10 @@ Distributions.pdf(product::DistProduct, x)    = Distributions.pdf(product.left, 
 Distributions.logpdf(product::DistProduct, x) = Distributions.logpdf(product.left, x) + Distributions.logpdf(product.right, x)
 
 Base.precision(product::DistProduct) = error("precision() is not defined for $(product). DistProduct structure has to be approximated and cannot be used in inference procedure.")
-Base.length(product::DistProduct)    = error("length() is not defined for $(product). DistProduct structure has to be approximated and cannot be used in inference procedure.")
-Base.ndims(product::DistProduct)     = error("ndims() is not defined for $(product). DistProduct structure has to be approximated and cannot be used in inference procedure.")
-Base.size(product::DistProduct)      = error("size() is not defined for $(product). DistProduct structure has to be approximated and cannot be used in inference procedure.")
+
+Base.ndims(product::DistProduct)  = __check_left_right_entries(:ndims, Base.ndims, product)
+Base.length(product::DistProduct) = __check_left_right_entries(:length, Base.length, product)
+Base.size(product::DistProduct)   = __check_left_right_entries(:size, Base.size, product)
 
 probvec(product::DistProduct)         = error("probvec() is not defined for $(product). DistProduct structure has to be approximated and cannot be used in inference procedure.")
 weightedmean(product::DistProduct)    = error("weightedmean() is not defined for $(product). DistProduct structure has to be approximated and cannot be used in inference procedure.")
