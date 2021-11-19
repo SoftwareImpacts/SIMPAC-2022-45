@@ -1,4 +1,4 @@
-module BetaTest
+module ContinuousUnivariateLogPdfTest
 
 using Test
 using ReactiveMP

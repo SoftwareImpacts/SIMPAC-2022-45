@@ -25,6 +25,9 @@ struct ContinuousUnivariateLogPdf{ D <: DomainSets.Domain, F } <: ContinuousUniv
     logpdf :: F
 end
 
+Base.show(io::IO, ::Type{ <: ContinuousUnivariateLogPdf }) = print(io, "ContinuousUnivariateLogPdf")
+Base.show(io::IO, dist::ContinuousUnivariateLogPdf)        = print(io, "ContinuousUnivariateLogPdf()")
+
 ContinuousUnivariateLogPdf(f::Function) = ContinuousUnivariateLogPdf(DomainSets.FullSpace(), f)
 
 (dist::ContinuousUnivariateLogPdf)(x::Real)                      = logpdf(dist, x)
@@ -41,8 +44,10 @@ Distributions.cov(dist::ContinuousUnivariateLogPdf)     = error("cov() is not de
 Distributions.invcov(dist::ContinuousUnivariateLogPdf)  = error("invcov() is not defined for `ContinuousUnivariateLogPdf`.")
 Distributions.entropy(dist::ContinuousUnivariateLogPdf) = error("entropy() is not defined for `ContinuousUnivariateLogPdf`.")
 
+Base.ndims(dist::ContinuousUnivariateLogPdf) = DomainSets.dimension(dist.domain)
+
 # We don't expect neither `pdf` nor `logpdf` to be normalised
-Distributions.pdf(dist::ContinuousUnivariateLogPdf, x::Real)    = exp(logpdf(dist, x))
+Distributions.pdf(dist::ContinuousUnivariateLogPdf, x::Real) = exp(logpdf(dist, x))
 
 function Distributions.logpdf(dist::ContinuousUnivariateLogPdf, x::Real) 
     @assert x ∈ dist.domain "x = $(x) does not belong to the domain of $dist"

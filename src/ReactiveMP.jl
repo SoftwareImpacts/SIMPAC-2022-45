@@ -64,6 +64,7 @@ include("distributions/exp_linear_quadratic.jl")
 include("distributions/wishart.jl")
 include("distributions/contingency.jl")
 include("distributions/function.jl")
+include("distributions/function_mv.jl")
 include("distributions/sample_list.jl")
 
 # Equality node is a special case and needs to be included before random variable implementation
